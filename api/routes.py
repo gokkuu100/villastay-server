@@ -5,3 +5,4 @@ ns = Namespace("villas", description="CRUD endpoints")
 class Hello(Resource):
     def get(self):
         return "Welcome to the first route"
+    
