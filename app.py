@@ -13,9 +13,13 @@ import os
 # loads env variables
 load_dotenv()
 
+UPLOAD_FOLDER = 'path/to/your/upload/folder'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://goku:Goku100!@localhost/villaDB'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
 db.init_app(app)

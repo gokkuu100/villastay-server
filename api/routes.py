@@ -1,9 +1,19 @@
+import os
 from flask import request, jsonify, make_response
 from flask_restx import Resource, Namespace
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from models import Admin, Guest
+from models import Admin, Guest, Property
 
 ns = Namespace("villas", description="CRUD endpoints")
+
+# Helper functions
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def generate_unique_filename(filename):
+    # Implement a logic to generate a unique filename
+    # You can use a combination of timestamps, random strings, or other strategies
+    return 'unique_filename.jpg'
 
 @ns.route("/home")
 class Hello(Resource):
@@ -99,11 +109,44 @@ class SignIn(Resource):
         except Exception as e:
             return make_response(jsonify({"error":str(e)}), 500)
         
-@ns.route("/protected")
-class Protected(Resource):
-    @jwt_required
-    def get(self):
-        current_user = get_jwt_identity()
-        user_id = current_user["id"]
-        user_role = current_user["role"]
-        return make_response(jsonify(logged_in_as=current_user, id=user_id, role=user_role), 200)
+# create villa
+@ns.route("/create")
+class CreateProperty(Resource):
+    def post(self):
+        from app import db, app
+        try:
+            data = request.get_json()
+            title = data.get("title")
+            description = data.get("description")
+            location = data.get("location")
+            price = data.get("price")
+            amenities = data.get("amenities")
+            status = data.get("status")
+            images = data.get("images")
+            ownerID = data.get("admin_id")
+
+            # Save images to the file system
+            image_paths = []
+            for img in images:
+                if allowed_file(img.filename):
+                    filename = generate_unique_filename(img.filename)
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    img.save(file_path)
+                    image_paths.append(file_path)
+
+            newProperty = Property(
+                title=title,
+                description=description,
+                location=location,
+                price=price,
+                amenities=amenities,
+                status=status,
+                images=image_paths,  # Save the file paths to the images
+                admin_id=ownerID
+            )
+            db.session.add(newProperty)
+            db.session.commit()
+            return make_response(jsonify({'message': 'New property created!'}), 201)
+        except Exception as e:
+            return make_response(jsonify({'error':'Error creating new property:'+ str(e)}), 500)
+
