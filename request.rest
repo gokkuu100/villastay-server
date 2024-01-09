@@ -1,0 +1,34 @@
+POST http://localhost:5000/api/villas/admin/signup
+Content-Type: application/json
+
+{
+    "email": "juma@gmail.com",
+    "password": "juma"
+}
+
+###
+
+POST http://localhost:5000/api/villas/guest/signup
+Content-Type: application/json
+
+{
+    "fname": "kesho",
+    "lname": "kesho",
+    "email": "kesho@gmail.com",
+    "password": "kesho"
+}
+
+###
+
+POST http://localhost:5000/api/villas/signin
+Content-Type: application/json
+
+{
+    "email": "bongo@gmail.com",
+    "password": "bongo"
+}
+
+###
+
+GET http://localhost:5000/api/villas/signin
+Authorization: Bearer 

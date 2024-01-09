@@ -14,7 +14,7 @@ class Guest(db.Model, SerializerMixin):
     password = db.Column(db.String(255))
 
     bookings = db.relationship('Booking', backref='guest', lazy=True)
-    reviews = db.relationship('Review', backref='guest', lazy=True)
+    reviews = db.relationship('Reviews', backref='guest', lazy=True)
 
     
 class Property(db.Model, SerializerMixin):
@@ -29,7 +29,7 @@ class Property(db.Model, SerializerMixin):
     images= db.Column(db.String(1000))
 
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False)
-    reviews = db.relationship('Review', backref='property', lazy=True)
+    reviews = db.relationship('Reviews', backref='property', lazy=True)
     booking = db.relationship('Booking', uselist=False, backref='property', lazy=True)
 
 class Booking(db.Model, SerializerMixin):
