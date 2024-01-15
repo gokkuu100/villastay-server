@@ -6,14 +6,6 @@ from models import Admin, Guest, Property
 
 ns = Namespace("villas", description="CRUD endpoints")
 
-# Helper functions
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def generate_unique_filename(filename):
-    # Implement a logic to generate a unique filename
-    # You can use a combination of timestamps, random strings, or other strategies
-    return 'unique_filename.jpg'
 
 @ns.route("/home")
 class Hello(Resource):
@@ -97,15 +89,15 @@ class SignIn(Resource):
             admin_user = Admin.query.filter_by(email=email).first()
             if admin_user and bcrypt.check_password_hash(admin_user.password, password):
                 token=create_access_token(identity={"id":admin_user.id, "role":"admin"})
-                return make_response(jsonify({"token": token, "role": "admin", "id": admin_user.id}))
+                return make_response(jsonify({"token": token, "role": "admin", "id": admin_user.id}), 201)
             
             # checks if user is guest
             guest_user = Guest.query.filter_by(email=email).first()
             if guest_user and bcrypt.check_password_hash(guest_user.password, password):
                 token=create_access_token(identity={"id":guest_user.id, "role": "guest"})
-                return make_response(jsonify({"token": token, "role": "guest", "id": guest_user.id}))
+                return make_response(jsonify({"token": token, "role": "guest", "id": guest_user.id}), 201)
             
-            return make_response(jsonify({"Email or password incorrect"}), 401)
+            return make_response(jsonify({"error": "Email or password incorrect"}), 401)
         except Exception as e:
             return make_response(jsonify({"error":str(e)}), 500)
         
@@ -115,38 +107,42 @@ class CreateProperty(Resource):
     def post(self):
         from app import db, app
         try:
-            data = request.get_json()
-            title = data.get("title")
-            description = data.get("description")
-            location = data.get("location")
-            price = data.get("price")
-            amenities = data.get("amenities")
-            status = data.get("status")
-            images = data.get("images")
-            ownerID = data.get("admin_id")
+            if request.is_json:
+                data = request.get_json()
+            else:
+                data = request.form.to_dict()
 
-            # Save images to the file system
-            image_paths = []
-            for img in images:
-                if allowed_file(img.filename):
-                    filename = generate_unique_filename(img.filename)
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    img.save(file_path)
-                    image_paths.append(file_path)
 
-            newProperty = Property(
+            title = data.get('title')
+            description = data.get('description')
+            location = data.get('location')
+            price = data.get('price')
+            amenities = data.get('amenities')
+            status = data.get('status')
+            admin_id = data.get('admin_id')
+
+            newVilla = Property(
                 title=title,
                 description=description,
                 location=location,
                 price=price,
                 amenities=amenities,
                 status=status,
-                images=image_paths,  # Save the file paths to the images
-                admin_id=ownerID
+                admin_id=admin_id
             )
-            db.session.add(newProperty)
-            db.session.commit()
-            return make_response(jsonify({'message': 'New property created!'}), 201)
-        except Exception as e:
-            return make_response(jsonify({'error':'Error creating new property:'+ str(e)}), 500)
+            newVilla.save_images(request.files.getlist("images"))
 
+            # Add this print statement for debugging
+            print("Received data:", data)
+
+
+            # Print the instance details before committing
+            print("New Villa instance:", newVilla.__dict__)
+
+            db.session.add(newVilla)
+            db.session.commit()
+            return make_response(jsonify({'message': 'New Villa created successfully!'}), 201)
+        except Exception as error:
+            print(error)
+            app.logger.error(f"Error creating new property: {str(error)}")
+            return make_response(jsonify({'message': 'Error creating new Villa.'}), 500)

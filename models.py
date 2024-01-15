@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_serializer import SerializerMixin
 from flask_bcrypt import Bcrypt
+import base64
 
 db = SQLAlchemy()
 
@@ -25,12 +26,22 @@ class Property(db.Model, SerializerMixin):
     location = db.Column(db.String(300))
     price = db.Column(db.Float)
     amenities = db.Column(db.String(300))
-    status = db.Column(db.Boolean())
-    images= db.Column(db.String(1000))
+    status = db.Column(db.String(300))
+    images= db.Column(db.BLOB)
 
-    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=False)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'))
     reviews = db.relationship('Reviews', backref='property', lazy=True)
     booking = db.relationship('Booking', uselist=False, backref='property', lazy=True)
+
+
+    def save_images(self, images):
+        image_list = []
+        for image in images:
+            image_data = image.read()
+            image_list.append(image_data)
+
+        # Combine images and store as a single binary data
+        self.images = b''.join(image_list)
 
 class Booking(db.Model, SerializerMixin):
     __tablename__ = "booking"

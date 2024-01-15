@@ -24,8 +24,8 @@ POST http://localhost:5000/api/villas/signin
 Content-Type: application/json
 
 {
-    "email": "bongo@gmail.com",
-    "password": "bongo"
+    "email": "juma@gmail.com",
+    "password": "juma"
 }
 
 ###
