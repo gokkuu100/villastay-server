@@ -27,21 +27,25 @@ class Property(db.Model, SerializerMixin):
     price = db.Column(db.Float)
     amenities = db.Column(db.String(300))
     status = db.Column(db.String(300))
-    images= db.Column(db.BLOB)
-
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'))
+
+    images= db.relationship('Image', backref='property', lazy=True)
     reviews = db.relationship('Reviews', backref='property', lazy=True)
     booking = db.relationship('Booking', uselist=False, backref='property', lazy=True)
 
 
     def save_images(self, images):
-        image_list = []
         for image in images:
             image_data = image.read()
-            image_list.append(image_data)
+            new_image = Image(data=image_data)
+            self.images.append(new_image)
 
-        # Combine images and store as a single binary data
-        self.images = b''.join(image_list)
+
+class Image(db.Model, SerializerMixin):
+    __tablename__ = "images"
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.BLOB)
+    property_id = db.Column(db.Integer, db.ForeignKey("properties.id"))
 
 class Booking(db.Model, SerializerMixin):
     __tablename__ = "booking"
@@ -54,8 +58,6 @@ class Booking(db.Model, SerializerMixin):
 
     guest_id = db.Column(db.Integer, db.ForeignKey('guests.id'), nullable=False)
     property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=False, unique=True)
-
-
 
 class Reviews(db.Model, SerializerMixin):
     __tablename__ = "reviews"

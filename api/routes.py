@@ -2,7 +2,7 @@ import os
 from flask import request, jsonify, make_response
 from flask_restx import Resource, Namespace
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from models import Admin, Guest, Property
+from models import Admin, Guest, Property, Image
 
 ns = Namespace("villas", description="CRUD endpoints")
 
@@ -110,9 +110,10 @@ class CreateProperty(Resource):
             if request.is_json:
                 data = request.get_json()
             else:
-                data = request.form.to_dict()
+                data = {key: request.form[key] for key in request.form}
 
-
+            app.logger.info("Received data:", data)
+            
             title = data.get('title')
             description = data.get('description')
             location = data.get('location')
@@ -130,7 +131,7 @@ class CreateProperty(Resource):
                 status=status,
                 admin_id=admin_id
             )
-            newVilla.save_images(request.files.getlist("images"))
+            
 
             # Add this print statement for debugging
             print("Received data:", data)
@@ -141,6 +142,17 @@ class CreateProperty(Resource):
 
             db.session.add(newVilla)
             db.session.commit()
+
+            # Save images
+            images = request.files.getlist("images")
+            for image in images:
+                if image.filename != '':
+                    image_data = image.read()
+                    new_image = Image(data=image_data, property_id=newVilla.id)
+                    db.session.add(new_image)
+            
+            db.session.commit()
+
             return make_response(jsonify({'message': 'New Villa created successfully!'}), 201)
         except Exception as error:
             print(error)
