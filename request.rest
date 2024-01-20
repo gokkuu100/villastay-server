@@ -2,8 +2,8 @@ POST http://localhost:5000/api/villas/admin/signup
 Content-Type: application/json
 
 {
-    "email": "juma@gmail.com",
-    "password": "juma"
+    "email": "prince@gmail.com",
+    "password": "prince"
 }
 
 ###
@@ -12,10 +12,10 @@ POST http://localhost:5000/api/villas/guest/signup
 Content-Type: application/json
 
 {
-    "fname": "kesho",
-    "lname": "kesho",
-    "email": "kesho@gmail.com",
-    "password": "kesho"
+    "fname": "wakesho",
+    "lname": "wakesho",
+    "email": "wakesho@gmail.com",
+    "password": "wakesho"
 }
 
 ###
@@ -24,8 +24,8 @@ POST http://localhost:5000/api/villas/signin
 Content-Type: application/json
 
 {
-    "email": "juma@gmail.com",
-    "password": "juma"
+    "email": "prince@gmail.com",
+    "password": "prince"
 }
 
 ###

@@ -3,6 +3,7 @@ from flask import request, jsonify, make_response
 from flask_restx import Resource, Namespace
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from models import Admin, Guest, Property, Image
+import base64
 
 ns = Namespace("villas", description="CRUD endpoints")
 
@@ -113,13 +114,17 @@ class CreateProperty(Resource):
                 data = {key: request.form[key] for key in request.form}
 
             app.logger.info("Received data:", data)
-            
+
             title = data.get('title')
             description = data.get('description')
             location = data.get('location')
             price = data.get('price')
             amenities = data.get('amenities')
-            status = data.get('status')
+            if isinstance(amenities, str):
+                amenities = amenities.split(',')
+            bedroom = data.get('bedroom')
+            bathroom = data.get('bathroom')
+            status = bool(data.get('status'))
             admin_id = data.get('admin_id')
 
             newVilla = Property(
@@ -127,19 +132,16 @@ class CreateProperty(Resource):
                 description=description,
                 location=location,
                 price=price,
-                amenities=amenities,
+                bedroom=bedroom,
+                bathroom=bathroom,
                 status=status,
                 admin_id=admin_id
             )
-            
 
-            # Add this print statement for debugging
-            print("Received data:", data)
+            # Save amenities correctly
+            newVilla.save_amenities(amenities)
 
-
-            # Print the instance details before committing
-            print("New Villa instance:", newVilla.__dict__)
-
+            # Save the property instance
             db.session.add(newVilla)
             db.session.commit()
 
@@ -150,11 +152,88 @@ class CreateProperty(Resource):
                     image_data = image.read()
                     new_image = Image(data=image_data, property_id=newVilla.id)
                     db.session.add(new_image)
-            
+
             db.session.commit()
 
             return make_response(jsonify({'message': 'New Villa created successfully!'}), 201)
         except Exception as error:
             print(error)
             app.logger.error(f"Error creating new property: {str(error)}")
+            
+            db.session.rollback()
             return make_response(jsonify({'message': 'Error creating new Villa.'}), 500)
+
+        
+# read all villa
+@ns.route("/listings")
+class AllVillas(Resource):
+    def get(self):
+        try:
+            properties = Property.query.all()
+            property_list = []
+            for property in properties:
+                amenities = [amenity.name for amenity in property.amenities]
+
+                property_data = {
+                    "id": property.id,
+                    "title": property.title,
+                    "location": property.location,
+                    "price": property.price,
+                    "description": property.description,
+                    "amenitites": amenities,
+                    "status": property.status,
+                    "images": []
+                }
+                images = Image.query.filter_by(property_id=property.id).all()
+                for image in images:
+                    image_data = {
+                        "id": image.id,
+                        "data": base64.b64encode(image.data).decode("utf-8")
+                    }
+                    property_data["images"].append(image_data)
+
+                property_list.append(property_data)
+            return make_response(jsonify(property_list), 200)
+        except Exception as e:
+            print(f"Error fetching property listings: {str(e)}")
+            return make_response(jsonify({"error": str(e)}), 500)
+        
+# get specific villa
+@ns.route("/listings/<int:id>")
+class SingleVilla(Resource):
+    def get(self, id):
+        try:
+            property = Property.query.get(id)
+            
+
+            if not property:
+                return make_response(jsonify({"error":"Property does not exist"}), 404)
+            
+            amenities = [amenity.name for amenity in property.amenities]
+
+            data = {
+                "id": property.id,
+                "title": property.title,
+                "location": property.location,
+                "price": property.price,
+                "description": property.description,
+                "amenities": amenities,
+                "status": property.status,
+                "images": []
+            }
+            images = Image.query.filter_by(property_id=property.id).all()
+            for image in images:
+                image_data = {
+                    "id": image.id,
+                    "data": base64.b64encode(image.data).decode("utf-8")
+                }
+                data['images'].append(image_data)
+            return make_response(jsonify(data), 200)
+        except Exception as e:
+            print(f"Error getting single listing: {str(e)}")
+            return make_response(jsonify({"error": str(e)}), 500)
+            
+
+            
+            
+

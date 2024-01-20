@@ -25,10 +25,12 @@ class Property(db.Model, SerializerMixin):
     description = db.Column(db.Text)
     location = db.Column(db.String(300))
     price = db.Column(db.Float)
-    amenities = db.Column(db.String(300))
-    status = db.Column(db.String(300))
+    bedroom = db.Column(db.Integer)
+    bathroom = db.Column(db.Integer)
+    status = db.Column(db.Boolean)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'))
 
+    amenities = db.relationship('Amenity', backref='property', lazy=True)
     images= db.relationship('Image', backref='property', lazy=True)
     reviews = db.relationship('Reviews', backref='property', lazy=True)
     booking = db.relationship('Booking', uselist=False, backref='property', lazy=True)
@@ -40,11 +42,22 @@ class Property(db.Model, SerializerMixin):
             new_image = Image(data=image_data)
             self.images.append(new_image)
 
+    def save_amenities(self, amenities):
+        for amenity_name in amenities:
+            amenity = Amenity(name=amenity_name)
+            self.amenities.append(amenity)
+
+class Amenity(db.Model, SerializerMixin):
+    __tablename__ = "amenities"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    property_id = db.Column(db.Integer, db.ForeignKey("properties.id"))
+
 
 class Image(db.Model, SerializerMixin):
     __tablename__ = "images"
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.BLOB)
+    data = db.Column(db.LargeBinary(length=16277215))
     property_id = db.Column(db.Integer, db.ForeignKey("properties.id"))
 
 class Booking(db.Model, SerializerMixin):
