@@ -2,7 +2,8 @@ import os
 from flask import request, jsonify, make_response
 from flask_restx import Resource, Namespace
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from models import Admin, Guest, Property, Image
+from models import Admin, Guest, Property, Image, Booking, Reviews
+from datetime import datetime
 import base64
 
 ns = Namespace("villas", description="CRUD endpoints")
@@ -169,7 +170,21 @@ class CreateProperty(Resource):
 class AllVillas(Resource):
     def get(self):
         try:
-            properties = Property.query.all()
+            location =request.args.get('location')
+            price = request.args.get('price')
+            rating = request.args.get('rating')
+
+            properties_query = Property.query
+
+            if location is not None and location != '':
+                properties_query = properties_query.filter(Property.location.ilike(f"{location}"))
+            if price is not None and price != '':
+                properties_query = properties_query.filter(Property.price < price)
+            if rating is not None and rating != '':
+                properties_query = properties_query.filter(Property.reviews.any(Reviews.rating <= rating))
+
+            properties = properties_query.all()
+
             property_list = []
             for property in properties:
                 amenities = [amenity.name for amenity in property.amenities]
@@ -180,7 +195,7 @@ class AllVillas(Resource):
                     "location": property.location,
                     "price": property.price,
                     "description": property.description,
-                    "amenitites": amenities,
+                    "amenities": amenities,
                     "status": property.status,
                     "images": []
                 }
@@ -193,6 +208,9 @@ class AllVillas(Resource):
                     property_data["images"].append(image_data)
 
                 property_list.append(property_data)
+            if not property_list:
+                return make_response(jsonify({"message": "No properties were found"}))
+            
             return make_response(jsonify(property_list), 200)
         except Exception as e:
             print(f"Error fetching property listings: {str(e)}")
@@ -217,10 +235,14 @@ class SingleVilla(Resource):
                 "location": property.location,
                 "price": property.price,
                 "description": property.description,
+                "bathroom": property.bathroom,
+                "bedroom": property.bedroom,
                 "amenities": amenities,
                 "status": property.status,
-                "images": []
+                "images": [],
+                "reviews": []
             }
+            # fetch images
             images = Image.query.filter_by(property_id=property.id).all()
             for image in images:
                 image_data = {
@@ -228,12 +250,87 @@ class SingleVilla(Resource):
                     "data": base64.b64encode(image.data).decode("utf-8")
                 }
                 data['images'].append(image_data)
+
+            # fetch reviews
+            reviews = Reviews.query.filter_by(property_id=property.id).all()
+            for review in reviews:
+                review_data = {
+                    "id": review.id,
+                    "comment": review.comment,
+                    "rating": review.rating,
+                    "date": review.date
+                }
+                data['reviews'].append(review_data)
+
             return make_response(jsonify(data), 200)
         except Exception as e:
             print(f"Error getting single listing: {str(e)}")
             return make_response(jsonify({"error": str(e)}), 500)
             
+            
+@ns.route("/booking")
+class BookingResource(Resource):
+    def post(self):
+        try:
+            from app import db, app
+            data = request.get_json()
+            checkOutDate = data.get("checkOutDate")
+            checkInDate = data.get("checkInDate")
+            bookingDate = data.get("bookingDate")
+            price = data.get("price")
+            paymentStatus = data.get("paymentStatus")
+            guest_id=data.get("guest_id")
+            property_id = data.get("property_id")
 
+            newBooking = Booking (
+                checkOutDate=checkOutDate,
+                checkInDate=checkInDate,
+                bookingDate=bookingDate,
+                price=price,
+                paymentStatus=paymentStatus,
+                guest_id=guest_id,
+                property_id=property_id
+            )
+
+            db.session.add(newBooking)
+            db.session.commit()
+
+            return make_response(jsonify({"Message": "Booking success"}), 200)
+        except Exception as e:
+            app.logger.error(f"Error creating new booking: {str(e)}")
+            db.session.rollback()
+            return make_response(jsonify({"error": str(e)}), 500)
+        
+@ns.route("/review")
+class ReviewResource(Resource):
+    def post(self):
+        try:
+            from app import db, app
+            data = request.get_json()
+            comment = data.get("comment")
+            rating = data.get("rating")
+            date = datetime.now().strftime("%d-%m-%Y")
+            guest_id = data.get("guest_id")
+            property_id = data.get("property_id")
+
+            newReview = Reviews (
+                comment=comment,
+                rating=rating,
+                date=date,
+                guest_id=guest_id,
+                property_id=property_id
+            )
+
+            db.session.add(newReview)
+            db.session.commit()
+
+            return make_response(jsonify({"message": "review created successfully"}), 201)
+        except Exception as e:
+            app.logger.error(f"Error creating a new review: {str(e)}")
+            db.session.rollback()
+            return make_response(jsonify({"error": f"Failed to create the review: {str(e)}"}), 500)
             
-            
+        
+
+    
 

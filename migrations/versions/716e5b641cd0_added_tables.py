@@ -1,8 +1,8 @@
-"""created tables
+"""added tables
 
-Revision ID: be4f3e1c7de0
+Revision ID: 716e5b641cd0
 Revises: 
-Create Date: 2024-01-19 18:56:39.840750
+Create Date: 2024-01-23 19:10:12.985686
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'be4f3e1c7de0'
+revision = '716e5b641cd0'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -59,7 +59,7 @@ def upgrade():
     sa.Column('checkInDate', sa.String(length=45), nullable=True),
     sa.Column('bookingDate', sa.String(length=45), nullable=True),
     sa.Column('price', sa.Float(), nullable=True),
-    sa.Column('paymentStatus', sa.Integer(), nullable=True),
+    sa.Column('paymentStatus', sa.Boolean(), nullable=True),
     sa.Column('guest_id', sa.Integer(), nullable=False),
     sa.Column('property_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['guest_id'], ['guests.id'], ),
@@ -69,7 +69,7 @@ def upgrade():
     )
     op.create_table('images',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('data', sa.BLOB(), nullable=True),
+    sa.Column('data', sa.LargeBinary(length=16277215), nullable=True),
     sa.Column('property_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['property_id'], ['properties.id'], ),
     sa.PrimaryKeyConstraint('id')
