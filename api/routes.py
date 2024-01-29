@@ -258,7 +258,11 @@ class SingleVilla(Resource):
                     "id": review.id,
                     "comment": review.comment,
                     "rating": review.rating,
-                    "date": review.date
+                    "date": review.date,
+                    "guest": {
+                        "id": review.guest.id,
+                        "fname": review.guest.fname,
+                    }
                 }
                 data['reviews'].append(review_data)
 
@@ -329,6 +333,35 @@ class ReviewResource(Resource):
             app.logger.error(f"Error creating a new review: {str(e)}")
             db.session.rollback()
             return make_response(jsonify({"error": f"Failed to create the review: {str(e)}"}), 500)
+        
+@ns.route("/reviews")
+class GetReviews(Resource):
+    def get(self):
+        try: 
+            from app import db, app
+            reviews = Reviews.query.all()
+            reviews_data = []
+            for review in reviews:
+                review_data = {
+                    "id": review.id,
+                    "comment": review.comment,
+                    "rating": review.rating,
+                    "date": review.date,
+                    "guest_id": review.guest_id,
+                    "property_id": review.property_id,
+                    "guest": {
+                        "id": review.guest.id,
+                        "fname": review.guest.fname,
+                    }
+                }
+                reviews_data.append(review_data)
+            return make_response(jsonify({"reviews": reviews_data}), 200)
+        
+        except Exception as e:
+            app.logger.error(f"Error fetching reviews: {str(e)}")
+            return make_response(jsonify({"error": f"Failed to fetch reviews: {str(e)}"}), 500)
+
+            
             
         
 

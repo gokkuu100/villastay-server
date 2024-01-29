@@ -1,8 +1,8 @@
-"""added tables
+"""added name to reviews
 
-Revision ID: 716e5b641cd0
+Revision ID: 9a4e20e19263
 Revises: 
-Create Date: 2024-01-23 19:10:12.985686
+Create Date: 2024-01-25 09:57:19.708151
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '716e5b641cd0'
+revision = '9a4e20e19263'
 down_revision = None
 branch_labels = None
 depends_on = None
