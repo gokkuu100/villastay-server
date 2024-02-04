@@ -5,6 +5,8 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from models import Admin, Guest, Property, Image, Booking, Reviews
 from datetime import datetime
 import base64
+import requests
+import json
 
 ns = Namespace("villas", description="CRUD endpoints")
 
@@ -360,10 +362,76 @@ class GetReviews(Resource):
         except Exception as e:
             app.logger.error(f"Error fetching reviews: {str(e)}")
             return make_response(jsonify({"error": f"Failed to fetch reviews: {str(e)}"}), 500)
-
-            
-            
         
+@ns.route('/darajatoken')
+class GetAccessToken(Resource):
+    def get(self):
+        consumer_key = "vlxIG7z3Y5pNrLF8LhFTFZ6GMQBAS16zLRvGkfo3LoqXY23y"
+        consumer_secretKey = "Bwq5SPyaSQcKiAWZnIN7S3GJvzPxdOb1AWA9b7ux2OxIdZARA7wBW3G1NgSgBMrK"
+        access_token_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+        headers = {'Content-Type': 'application/json'}
+        auth = (consumer_key, consumer_secretKey)
+        try:
+            response = requests.get(access_token_url, headers=headers, auth=auth)
+            result = response.json()
+            access_token = result['access_token']
+            return make_response(jsonify({"access_token": access_token}), 200) 
+        except Exception as e:
+            return make_response(jsonify({'message':'Error getting the Access Token.'+ str(e)}), 401)  
 
-    
+@ns.route('/stkpush')
+class InitiateSTKPush(Resource):
+    def post(self):
+        access_token_resource = GetAccessToken()
+        access_token_response = access_token_resource.get()
 
+        if access_token_response.status_code == 200:
+            access_token = access_token_response.get_json()['access_token']
+            
+            if access_token:
+                amount = 1
+                phone = "254746551520"
+                passkey = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+                business_short_code = "174379"
+                process_request_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+                callback_url = "https://mydomain.com/pat"
+                timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                password = base64.b64encode((business_short_code + passkey + timestamp).encode()).decode()
+                party_a = phone
+                party_b = "174379"
+                account_reference = "GokuLTD"
+                transaction_desc = "stkpush_test"
+                stk_push_headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + access_token
+                }
+                stk_push_payload = {
+                    'BusinessShortCode': business_short_code,
+                    'Password':  password,
+                    'Timestamp': timestamp,
+                    'TransactionType': 'CustomerPayBillOnline',
+                    'Amount': amount,
+                    'PartyA':  party_a,
+                    'PartyB': business_short_code,
+                    'PhoneNumber': party_a,
+                    'CallBackURL': callback_url,
+                    'AccountReference': account_reference,
+                    'TransactionDesc': transaction_desc
+                }
+
+                try:
+                    response = requests.post(process_request_url, headers=stk_push_headers, json=stk_push_payload)
+                    response_data = response.json()
+                    checkout_request_id = response_data['CheckoutRequestID']
+                    response_code = response_data['ResponseCode']
+
+                    if response_code == '0':
+                        return jsonify({'CheckoutRequestID': checkout_request_id, 'ResponseCode': response_code})
+                    else:
+                        return make_response(jsonify({'error': 'STK push failed'}))
+                except Exception as e:
+                    return make_response(jsonify({'error': str(e)}))
+            else:
+                return make_response(jsonify({'error': 'Access token not available'}))
+        else:
+            return make_response(jsonify({'error': 'Failed to get access_token.'}))
