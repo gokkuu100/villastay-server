@@ -1,4 +1,3 @@
-import os
 from flask import request, jsonify, make_response
 from flask_restx import Resource, Namespace
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
@@ -6,7 +5,6 @@ from models import Admin, Guest, Property, Image, Booking, Reviews
 from datetime import datetime
 import base64
 import requests
-import json
 
 ns = Namespace("villas", description="CRUD endpoints")
 
